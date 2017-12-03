@@ -1,0 +1,33 @@
+author: Miska Peippo <18567301+peimis@users.noreply.github.com>
+type: lib
+description: Mongoose-OS ESP32 Touch lib for xpt2046
+version: 0.1
+
+sources:
+  - src
+
+includes:
+  - include
+
+# filesystem:
+#   - fs
+
+config_schema:
+  - ["xpt2046", "o", {title: "xpt2046 custom settings"}]
+  - ["xpt2046.irq_pin", "i", 13, {title: "Touch IRQ pin"}]
+  - ["xpt2046.cs_index", "i", 2, {title: "Touch CS pin"}]
+  - ["xpt2046.calx", "i", 0, {title: "Touch X calibration value"}]
+  - ["xpt2046.caly", "i", 0, {title: "Touch Y calibration value"}]
+  - ["xpt2046.max_rd_speed", "i", 500000, {title: "maximum spi clock for display read operations"}]
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/spi
+#  - origin: libs/lobo-spi
+
+tags:
+  - c
+  - js
+  - spi
+  - hw
+
+manifest_version: 2017-09-29
