@@ -38,29 +38,20 @@ static uint16_t s_max_y = 320;
 static int xpt2046_read_data(uint8_t type)
 {
 	int res;
-	uint8_t rxbuf[3];
+	uint8_t rxbuf[2];
 
-	xpt2046_txn.fd.len = 3;
-	xpt2046_txn.fd.tx_data = &type;
-	xpt2046_txn.fd.rx_data = rxbuf;
+	xpt2046_txn.hd.tx_len = 1;
+	xpt2046_txn.hd.tx_data = &type;
+	xpt2046_txn.hd.dummy_len = 0;
+	xpt2046_txn.hd.rx_len = 2;
+	xpt2046_txn.hd.rx_data = rxbuf;
 
-	if (!mgos_spi_run_txn(xpt2046_spi, true /* full_duplex */, &xpt2046_txn)) {
+	if (!mgos_spi_run_txn(xpt2046_spi, false /* full_duplex */, &xpt2046_txn)) {
 		LOG(LL_ERROR, ("SPI transaction failed"));
 		return -1;
 	}
 
-	res = (rxbuf[1] << 8) | rxbuf[2];
-
-/*
-    spi_lobo_device_select(xpt0246_spi, 0);
-
-    xpt0246_spi->host->hw->data_buf[0] = type;
-    _xspi_transfer_start(xpt0246_spi, 24, 24);
-    uint16_t res = (uint16_t)(xpt0246_spi->host->hw->data_buf[0] >> 8);
-    res = ((res & 0xFF) << 8) | ((res & 0xFF00) >> 8);
-
-    spi_lobo_device_deselect(xpt0246_spi);
-*/
+	res = (rxbuf[0] << 8) | rxbuf[1];
     return res;
 }
 
@@ -209,7 +200,6 @@ void xpt2046_read_timer_cb(void *arg)
 		xpt_last_touch.direction = TOUCH_UP;
 		mgos_gpio_enable_int(pin);
 	}
-
 	if (xpt_event_handler) xpt_event_handler(&xpt_last_touch);
 }
 
@@ -224,23 +214,21 @@ void xpt2046_intr_handler(const int pin, void *arg)
 	int touch_state = 0;
 	int tx=0, ty=0, tz;
 
-	if (!pin_state) {
-		mgos_gpio_disable_int(pin);
-
-		mgos_set_timer(100, 0, xpt2046_read_timer_cb, (void *)pin);
+	if (!pin_state)
+	{
 
 		if ((touch_state = xpt2046_read_touch(&tx, &ty, &tz))) {
 
+			// To avoid an interrupt flood from touch, set a timer and disable the interrupt
+			mgos_set_timer(100, 0, xpt2046_read_timer_cb, (void *)pin);
+			mgos_gpio_disable_int(pin);
 
 			xpt2046_map_rotation(tx, ty, &ed.x, &ed.y);
-//			mgos_ili9341_drawCircle(tx, ty, 5, ILI9341_MAGENTA);
-			printf("%d %d -> %d %d\n", tx, ty, ed.x, ed.y);
 
 	        ed.length=1;
 	        ed.direction = TOUCH_DOWN;
 	        ed.z = tz;
 
-	        // To avoid DOWN events without an UP event, set a timer (see stmpe610_down_cb for details)
 	        memcpy((void *)&xpt_last_touch, (void *)&ed, sizeof(xpt_last_touch));
 		}
 		else
@@ -251,6 +239,7 @@ void xpt2046_intr_handler(const int pin, void *arg)
 	        ed.y = 0;
 	        ed.z = 0;
 		}
+
 		if (xpt_event_handler) xpt_event_handler(&ed);
 	}
 }
