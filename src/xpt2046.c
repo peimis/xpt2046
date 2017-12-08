@@ -159,21 +159,21 @@ static void xpt2046_map_rotation(uint16_t x, uint16_t y, uint16_t *x_out, uint16
 
 	switch(_lcd_orientation)
 	{
-	case XPT2046_LANDSCAPE:
+	case XPT2046_LANDSCAPE: // 1
 	    *x_out = map(y, ymin, xmax, 0, s_max_x);
 	    *y_out = map(x, xmin, ymax, 0, s_max_y);
 	    break;
-	case XPT2046_PORTRAIT_FLIP:
-	    *x_out = map(x, xmin, xmax, 0, s_max_x);
-	    *y_out = 4095-map(y, ymin, ymax, 0, s_max_y);
+	case XPT2046_PORTRAIT_FLIP: // 2
+	    *x_out = s_max_y - map(x, xmin, xmax, 0, s_max_y);
+	    *y_out = map(y, ymin, ymax, 0, s_max_x);
 	    break;
-	case XPT2046_LANDSCAPE_FLIP:
-	    *x_out = 4095-map(y, ymin, xmax, 0, s_max_x);
-	    *y_out = 4095-map(x, xmin, ymax, 0, s_max_y);
+	case XPT2046_LANDSCAPE_FLIP:  // 3
+	    *x_out = map(y, ymin, xmax, 0, s_max_x);
+	    *y_out = s_max_y - map(x, xmin, ymax, 0, s_max_y);
 	    break;
 	default: // XPT2046_PORTRAIT
-	    *x_out = 4095-map(x, xmin, xmax, 0, s_max_x);
-	    *y_out = map(y, ymin, ymax, 0, s_max_y);
+	    *x_out = s_max_y - map(x, xmin, xmax, 0, s_max_y);
+	    *y_out = map(y, ymin, ymax, 0, s_max_x);
 	}
 }
 
@@ -191,7 +191,8 @@ void xpt2046_read_timer_cb(void *arg)
 		xpt2046_map_rotation(tx, ty, &xpt_last_touch.x, &xpt_last_touch.y);
 		printf("XPT touch %d %d -> %d %d\n", tx, ty, xpt_last_touch.x, xpt_last_touch.y);
 
-//		mgos_ili9341_drawCircle(tx, ty, 3, ILI9341_GREEN);
+//		mgos_ili9341_set_fgcolor565(ILI9341_GREEN);
+//		mgos_ili9341_drawCircle(xpt_last_touch.x, xpt_last_touch.y, 3);
 		xpt_last_touch.length++;
 		xpt_last_touch.z = tz;
 
@@ -307,6 +308,7 @@ void mgos_xpt2046_set_dimensions(const uint16_t x, const uint16_t y)
 {
 	s_max_x = x;
 	s_max_y = y;
+	LOG(LL_INFO, ("X=%d Y=%d", x, y ));
 }
 
 void mgos_xpt2046_set_handler(mgos_xpt2046_event_t handler) {
